@@ -1,9 +1,13 @@
 'use strict';
 
 const MAX_TOTAL_PIECES = 12;
+const MAX_REMNANT_COUNT = 12;
 
 const rowsBody = document.getElementById('spec-rows');
 const counterEl = document.getElementById('piece-counter');
+const remnantRowsBody = document.getElementById('remnant-rows');
+const remnantTable = document.getElementById('remnant-table');
+const remnantCounterEl = document.getElementById('remnant-counter');
 const errorEl = document.getElementById('form-error');
 const resultEl = document.getElementById('result');
 
@@ -56,6 +60,43 @@ function updateCounter() {
   counterEl.classList.toggle('over', total > MAX_TOTAL_PIECES);
 }
 
+function addRemnantRow(length = '', qty = 1) {
+  const tr = document.createElement('tr');
+  tr.className = 'remnant-row';
+  tr.innerHTML = `
+    <td><span class="remnant-tag">余料</span></td>
+    <td><input type="number" class="rem-len-input" min="0" step="any" /></td>
+    <td><input type="number" class="rem-qty-input" min="1" step="1" /></td>
+    <td><button type="button" class="btn-remove" title="删除该行">✕</button></td>
+  `;
+  tr.querySelector('.rem-len-input').value = length;
+  tr.querySelector('.rem-qty-input').value = qty;
+  tr.querySelector('.btn-remove').addEventListener('click', () => {
+    tr.remove();
+    updateRemnantView();
+  });
+  tr.querySelectorAll('input').forEach((input) => {
+    input.addEventListener('input', updateRemnantView);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('calc-btn').click();
+    });
+  });
+  remnantRowsBody.appendChild(tr);
+  updateRemnantView();
+}
+
+function updateRemnantView() {
+  remnantTable.hidden = remnantRowsBody.children.length === 0;
+  let total = 0;
+  remnantRowsBody.querySelectorAll('.rem-qty-input').forEach((input) => {
+    const q = Number(input.value);
+    if (Number.isInteger(q) && q > 0) total += q;
+  });
+  remnantCounterEl.textContent =
+    remnantRowsBody.children.length === 0 ? '' : `余料总根数：${total} / ${MAX_REMNANT_COUNT}`;
+  remnantCounterEl.classList.toggle('over', total > MAX_REMNANT_COUNT);
+}
+
 function showError(msg) {
   errorEl.textContent = msg;
   errorEl.hidden = false;
@@ -81,21 +122,64 @@ function collectPayload() {
       qty: tr.querySelector('.qty-input').value,
     });
   });
-  return { stockLength, kerf, items };
+  // 余料：长度留空的行视为未录入，直接忽略
+  const remnants = [];
+  Array.from(remnantRowsBody.children).forEach((tr) => {
+    const length = tr.querySelector('.rem-len-input').value;
+    if (String(length).trim() === '') return;
+    remnants.push({
+      length,
+      qty: tr.querySelector('.rem-qty-input').value,
+    });
+  });
+  return { stockLength, kerf, items, remnants };
+}
+
+function renderRemnantSummary(remnants) {
+  const el = document.getElementById('remnant-summary');
+  if (!remnants || remnants.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  const rows = remnants
+    .map(
+      (r) => `
+      <tr>
+        <td>${fmt(r.length)}</td>
+        <td>${r.available}</td>
+        <td>${r.used}</td>
+        <td>${r.remaining}</td>
+      </tr>`
+    )
+    .join('');
+  el.innerHTML = `
+    <h3 class="remnant-summary-title">余料消耗</h3>
+    <table class="remnant-summary-table">
+      <thead>
+        <tr><th>余料长度</th><th>可用根数</th><th>本次消耗</th><th>剩余根数</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
 }
 
 function renderBins(result) {
-  const L = result.stockLength;
   const summary = `
     <span>原料长度：<strong>${fmt(result.stockLength)}</strong></span>
     <span>锯缝宽度：<strong>${fmt(result.kerf)}</strong></span>
-    <span>原料根数：<strong>${result.binCount}</strong></span>
+    <span>新料根数：<strong>${result.newBinCount}</strong></span>
+    <span>余料根数：<strong>${result.remnantBinCount}</strong></span>
     <span>总片数：<strong>${result.totalPieces}</strong></span>
     <span>锯缝总数：<strong>${result.totalCuts}</strong></span>
+    <span>投入总长度：<strong>${fmt(result.totalStockLength)}</strong></span>
     <span>总余长：<strong>${fmt(result.totalLeftover)}</strong></span>
     <span>综合利用率：<strong>${(result.utilization * 100).toFixed(1)}%</strong></span>
   `;
   document.getElementById('summary').innerHTML = summary;
+  renderRemnantSummary(result.remnants);
+
+  // 各根原料长度可能不同，示意图宽度按最长一根为 100% 等比缩放
+  const maxStock = Math.max(...result.bins.map((b) => b.stockLength));
 
   const binsHtml = result.bins
     .map((bin) => {
@@ -103,13 +187,18 @@ function renderBins(result) {
         .map((p) => `${p.label}(${fmt(p.length)})`)
         .join('<span class="arrow">→</span>');
 
+      const isRemnant = bin.source === 'remnant';
+      const sourceTag = isRemnant
+        ? '<span class="source-tag remnant">余料</span>'
+        : '<span class="source-tag new">新料</span>';
+
       // 示意图：裁片 + 片间锯缝（红色）+ 余长（灰色）
       let barInner = '';
       bin.pieces.forEach((p, i) => {
         barInner += `<div class="seg" style="flex-grow:${p.length}" title="${p.label} ${fmt(p.length)}">${p.label}</div>`;
         if (i < bin.cuts && result.kerf > 0) {
           // 按真实比例显示；过小的锯缝适当加宽以便辨认（示意图，精确数值见下方文字）
-          const kerfWidth = Math.max(result.kerf, result.stockLength * 0.008);
+          const kerfWidth = Math.max(result.kerf, bin.stockLength * 0.008);
           barInner += `<div class="seg kerf" style="flex-grow:${kerfWidth}" title="锯缝 ${fmt(result.kerf)}"></div>`;
         }
       });
@@ -117,10 +206,12 @@ function renderBins(result) {
         barInner += `<div class="seg leftover" style="flex-grow:${bin.leftover}" title="余长 ${fmt(bin.leftover)}">余 ${fmt(bin.leftover)}</div>`;
       }
 
+      const barWidth = Math.max((bin.stockLength / maxStock) * 100, 8);
+
       return `
         <div class="bin">
-          <div class="bin-title">第 ${bin.index} 根原料</div>
-          <div class="bar">${barInner}</div>
+          <div class="bin-title">第 ${bin.index} 根 ${sourceTag}<span class="bin-stock-len">${fmt(bin.stockLength)}</span></div>
+          <div class="bar" style="width:${barWidth}%">${barInner}</div>
           <div class="bin-seq">裁切顺序：${seq}<span class="arrow">→</span><span class="leftover-tag">余长 ${fmt(bin.leftover)}</span></div>
           <div class="bin-meta">共 ${bin.count} 片，锯缝 ${bin.cuts} 条，已用 ${fmt(bin.usedLength)}，余长 ${fmt(bin.leftover)}</div>
         </div>
@@ -131,6 +222,7 @@ function renderBins(result) {
 }
 
 document.getElementById('add-row').addEventListener('click', () => addRow());
+document.getElementById('add-remnant').addEventListener('click', () => addRemnantRow());
 document.getElementById('calc-btn').addEventListener('click', async () => {
   clearError();
   resultEl.hidden = true;

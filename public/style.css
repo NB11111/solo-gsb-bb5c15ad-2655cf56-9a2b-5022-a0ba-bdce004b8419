@@ -119,6 +119,18 @@ h2 {
   padding: 3px 6px;
 }
 
+.remnant-tag {
+  display: inline-block;
+  min-width: 26px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4a6b2a;
+  background: #e9f2dc;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
 .row-actions {
   display: flex;
   align-items: center;
@@ -231,6 +243,59 @@ h2 {
   font-weight: 700;
   color: var(--wood-dark);
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.source-tag {
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.source-tag.new {
+  color: #fff;
+  background: var(--wood);
+}
+
+.source-tag.remnant {
+  color: #4a6b2a;
+  background: #e9f2dc;
+  border: 1px solid #cfdcb4;
+}
+
+.bin-stock-len {
+  font-size: 13px;
+  font-weight: 400;
+  color: #888;
+}
+
+.remnant-summary-title {
+  font-size: 15px;
+  margin: 0 0 8px;
+  color: var(--wood-dark);
+}
+
+.remnant-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 18px;
+}
+
+.remnant-summary-table th,
+.remnant-summary-table td {
+  padding: 7px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.remnant-summary-table th {
+  color: var(--wood-dark);
+  font-weight: 600;
+  background: var(--wood-light);
 }
 
 .bin-seq {
@@ -331,7 +396,9 @@ footer {
     margin: 0 0 12px;
   }
 
-  .bar .seg {
+  .bar .seg,
+  .source-tag,
+  .remnant-summary-table th {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
