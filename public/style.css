@@ -119,6 +119,73 @@ h2 {
   padding: 3px 6px;
 }
 
+.leftover-heading {
+  margin-top: 26px;
+}
+
+.leftover-badge {
+  background: #e3f1e6;
+  color: #2f6b3a;
+  min-width: 34px;
+}
+
+.kind-tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.tag-leftover {
+  background: #e3f1e6;
+  color: #2f6b3a;
+  border: 1px solid #b7dcc0;
+}
+
+.tag-new {
+  background: var(--wood-light);
+  color: var(--wood-dark);
+  border: 1px solid var(--line);
+}
+
+.bin-leftover {
+  border-color: #b7dcc0;
+  background: #f7fbf8;
+}
+
+.bar .seg-leftover {
+  background: #4e8a5b;
+}
+
+.sub-heading {
+  font-size: 15px;
+  margin: 4px 0 10px;
+  color: var(--wood-dark);
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 18px;
+  font-size: 14px;
+}
+
+.summary-table th,
+.summary-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.summary-table th {
+  color: var(--wood-dark);
+  font-weight: 600;
+  background: var(--wood-light);
+}
+
 .row-actions {
   display: flex;
   align-items: center;
